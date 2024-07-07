@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>External functions wasm</title>
+
+<script src="fftwasm.js"></script>
+
+<script>
+
+    Module.onRuntimeInitialized = async () => {
+        const api = {
+        get_version: Module.cwrap("get_version", "number", []),
+        create_buffer: Module.cwrap("create_buffer", "number", ["number", "number"]),
+        destroy_buffer: Module.cwrap("destroy_buffer", "", ["number"]),
+
+        create_double_buffer: Module.cwrap("create_double_buffer", "number", ["number"]),
+        destroy_double_buffer: Module.cwrap("destroy_double_buffer", "", ["number"]),
+        print_double_buffer : Module.cwrap("print_double_buffer", "", ["number", "number"]),
+
+        fft_forward: Module.cwrap("fft_forward", "number", ["number","number","number", "number", "number"]),
+        fft_backward: Module.cwrap("fft_backward", "number", ["number","number","number", "number", "number"]),
+        fft_phase: Module.cwrap("fft_phase", "", ["number","number","number", "number","number"]),
+        fft_spectre: Module.cwrap("fft_spectre", "", ["number","number","number", "number", "number", "number"]),        
+
+        };
+
+        console.log('FFTWasm Version:'+api.get_version());
+        
+
+
+
+    function getPixels(inputImage)
+    {
+        return new Promise((resolve, reject) => {
+            
+            try {                
+                let offscreenCanvas = document.createElement("canvas");
+                offscreenCanvas.width = inputImage.width;
+                offscreenCanvas.height = inputImage.height;    
+
+                const ctx = offscreenCanvas.getContext("2d");
+                ctx.drawImage(inputImage, 0, 0);    
+
+                const imageData = ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                const data = imageData.data;
+
+                const grayBuffer = new Uint8ClampedArray(data.length / 4);
+
+                for (let i = 0; i < data.length; i += 4) {
+                    //bilinear
+                    grayBuffer[i/4] = (data[i] * 0.2126) + (data[i + 1] * 0.7152) + (data[i + 2] * 0.0722);                    
+                }
+
+                resolve(grayBuffer);
+                
+            } catch (error) {
+                
+                reject(error);
+            }            
+        });
+    }
+
+    function getImageFromPixels(pixels, width, height)
+    {
+        return new Promise((resolve, reject) => {
+            
+            try {     
+                
+                if(width * height != pixels.length)
+                    throw "Os pixels devem estar em escala de cinza";
+                
+                let offscreenCanvas = document.createElement("canvas");
+                offscreenCanvas.width = width;
+                offscreenCanvas.height = height;    
+                //document.body.appendChild(offscreenCanvas);
+
+                const ctx = offscreenCanvas.getContext("2d");
+
+                ctx.fillStyle = "white";
+                ctx.fillRect(0,0,width, height);
+
+                const blankImage = new Image(width, height);   
+
+                blankImage.addEventListener("load", () => {
+
+                    let imageData = ctx.getImageData(0, 0, width, height);
+
+                     for (let i = 0; i < imageData.data.length; i += 4) {                   
+
+                        //bilinear
+                        const pixelValue = pixels[i/4];
+                        imageData.data[i] = pixelValue; // red
+                        imageData.data[i + 1] = pixelValue; // green
+                        imageData.data[i + 2] = pixelValue; // blue
+                    }
+
+                    //imageData.data = data;
+                    ctx.putImageData(imageData, 0, 0);
+
+                    const outputImage = new Image();  
+                    outputImage.addEventListener("load", () => {
+                        resolve(outputImage);
+                    });
+                    outputImage.src = offscreenCanvas.toDataURL(); 
+                    //outputImage.src = offscreenCanvas.toDataURL("image/jpeg", 1.0);  
+                });
+                
+                blankImage.src = offscreenCanvas.toDataURL(); 
+
+            } catch (error) {
+                
+                reject(error);
+            }
+        });
+    }
+
+    function initialize()
+    {
+        const img = new Image(); // Create new img element
+        
+
+        img.addEventListener("load", () => {
+
+            getPixels(img).then(
+                (pixels) => 
+                {
+                    if(pixels)
+                    {
+                        const ptr_real_part = api.create_double_buffer(img.width * img.height);                            
+                        const ptr_imag_part = api.create_double_buffer(img.width * img.height);
+
+                        const ptr_img = api.create_buffer(img.width, img.height);
+                        Module.HEAP8.set(pixels, ptr_img);
+                        api.fft_forward(ptr_img, img.width, img.height, ptr_real_part, ptr_imag_part );
+                        api.destroy_buffer(ptr_img);
+
+                        var real_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_real_part, img.width * img.height);
+                        var imag_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_imag_part, img.width * img.height);
+
+                        //api.destroy_double_buffer(ptr_real_part);
+                        //api.destroy_double_buffer(ptr_imag_part);
+
+                        // const output_img = api.create_buffer(img.width, img.height);
+                        // api.fft_backward(ptr_real_part, ptr_imag_part, output_img, img.width, img.height);
+                        // var pixels_backward = new Uint8Array(Module.HEAP8.buffer, output_img, img.width * img.height);
+
+                        // getImageFromPixels(pixels_backward, img.width, img.height).then(
+                        // (outputImg) => 
+                        // {
+                        //     document.body.appendChild(outputImg);
+                        // },
+                        // (error) => 
+                        // {
+                        //     console.error("Erro ao montar a imagem a partir dos pixels");
+                        //     console.log(error);                     
+                        // });
+
+                        const output_img = api.create_buffer(img.width, img.height);
+                        const output_spectre = api.create_double_buffer(img.width * img.height);
+
+                        api.fft_spectre(ptr_real_part, ptr_imag_part, output_spectre, output_img, img.width , img.height);
+                        var pixels_spectre = new Uint8Array(Module.HEAP8.buffer, output_img, img.width * img.height);
+
+                        api.destroy_double_buffer(output_img);
+                        api.destroy_double_buffer(output_spectre);
+
+                        getImageFromPixels(pixels_spectre, img.width, img.height).then(
+                        (outputImg) => 
+                        {
+                            document.body.appendChild(outputImg);
+                        },
+                        (error) => 
+                        {
+                            console.error("Erro ao montar a imagem a partir do escpectro");
+                            console.log(error);                     
+                        });
+                        
+
+
+
+                        
+                    }
+
+                }, 
+                (error) => 
+                {
+                    console.error("Erro ao pegar os pixels da imagem");
+                    console.log(error);                     
+                }
+            );
+        
+        });
+        img.src = "palhaco.jpg"; // Set source path    
+    }
+
+    initialize();
+
+
+    };
+
+ 
+
+  
+</script>
+
+
+</head>
+<body>
+
+
+
+</body>
+</html>
