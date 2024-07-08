@@ -269,19 +269,16 @@ EXTERN EMSCRIPTEN_KEEPALIVE double get_version() {
   return 0.1;
 }
 
-EXTERN EMSCRIPTEN_KEEPALIVE
-uint8_t* create_buffer(int width, int height) {
-  return (uint8_t*)malloc(width * height * sizeof(uint8_t));
+EXTERN EMSCRIPTEN_KEEPALIVE unsigned char* create_uchar_buffer(int size) {
+  return (unsigned char*)malloc(size * sizeof(unsigned char));
 }
 
-EXTERN EMSCRIPTEN_KEEPALIVE
-void destroy_buffer(uint8_t* p) {
+EXTERN EMSCRIPTEN_KEEPALIVE void destroy_buffer(unsigned char* p) {
   free(p);
 }
 
 
-EXTERN EMSCRIPTEN_KEEPALIVE
-double* create_double_buffer(int size) {
+EXTERN EMSCRIPTEN_KEEPALIVE double* create_double_buffer(int size) {
   return (double*)malloc(size * sizeof(double));
 }
 
@@ -291,41 +288,37 @@ void destroy_double_buffer(double* p) {
 }
 
 
-EXTERN EMSCRIPTEN_KEEPALIVE
-void print_double_buffer(double* p, int size) {
-  
+EXTERN EMSCRIPTEN_KEEPALIVE void print_buffer(double* p, int size) {
   for(int i = 0; i < size ; i++)
-  {
-    std::cout << p[i] << std::endl;
-  }
+      std::cout << p[i] << std::endl;
 }
 
 
 EXTERN EMSCRIPTEN_KEEPALIVE int fft_forward(unsigned char* img_in, int width, int height, double* real, double *imag)
 {
-  const int size = width * height;
-  double *r = new double[size];
+  	const int size = width * height;
+  	double *r = new double[size];
 	double *i = new double[size];
 	std::fill_n(i, size, 0);
-  std::fill_n(r, size, 0);
+  	std::fill_n(r, size, 0);
 
-  //std::cout << "Imagem cpp:" << (int)img_in[0] << " - " << (int)img_in[size - 1] << std::endl;
+  	//std::cout << "Imagem cpp:" << (int)img_in[0] << " - " << (int)img_in[size - 1] << std::endl;
 
 	for (int j = 0; j < size; j++)
 	{
 		r[j] = img_in[j];
 	}
 
-  int result = FFT2D(r, i, width, height, 0);	
+	int result = FFT2D(r, i, width, height, 0);	
 
-  memcpy((real), r, size * sizeof(double));
-  memcpy((imag), i, size * sizeof(double));
+	memcpy((real), r, size * sizeof(double));
+	memcpy((imag), i, size * sizeof(double));
 
-  delete [] r;
-  delete [] i;
+	delete [] r;
+	delete [] i;
 
-  //std::cout << "Real cpp:" << std::setprecision (15) << real[0] << " - " << std::setprecision (15) << real[size - 1] << std::endl;
-  //std::cout << "Imaginaria cpp:" << std::setprecision (15) << imag[0] << " - " << std::setprecision (15) << imag[size - 1] << std::endl;
+	//std::cout << "Real cpp:" << std::setprecision (15) << real[0] << " - " << std::setprecision (15) << real[size - 1] << std::endl;
+	//std::cout << "Imaginaria cpp:" << std::setprecision (15) << imag[0] << " - " << std::setprecision (15) << imag[size - 1] << std::endl;
 
 	return result;
 }
@@ -342,13 +335,13 @@ EXTERN EMSCRIPTEN_KEEPALIVE int fft_backward(double *realBuffer, double *imgBuff
 
 	unsigned char *rawInverseRealOut = 0;
 	normalizaBufferDouble2Uchar(r, &rawInverseRealOut, w * h, 255);
-  memcpy(buffer, rawInverseRealOut, w * h * sizeof(unsigned char));
-  delete [] rawInverseRealOut;
+  	memcpy(buffer, rawInverseRealOut, w * h * sizeof(unsigned char));
+  	delete [] rawInverseRealOut;
 
 	delete[] r;
 	delete[] i;
 
-  return result;
+  	return result;
 }
 
 
@@ -357,16 +350,16 @@ EXTERN EMSCRIPTEN_KEEPALIVE void fft_phase(double *realBuffer, double *imgBuffer
 	for (int i = 0; i < sizeBuffer; i++)
 		phase[i] = atan(imgBuffer[i] / realBuffer[i]);
 
-  unsigned char *raw = 0;
+	unsigned char *raw = 0;
 	normalizaBufferDouble2Uchar(phase, &raw, sizeBuffer, 255);
-  memcpy(phase_normalized, raw, sizeBuffer * sizeof(unsigned char));
-  delete [] raw;
+	memcpy(phase_normalized, raw, sizeBuffer * sizeof(unsigned char));
+	delete [] raw;
 }
 
 EXTERN EMSCRIPTEN_KEEPALIVE void fft_spectre(double *realBuffer, double *imgBuffer, double *spectre, unsigned char *spectre_normalized, int width, int height)
 {
 
-  int sizeBuffer = width * height;
+  	int sizeBuffer = width * height;
 
 	for (int i = 0; i < sizeBuffer; i++)
 	{
@@ -374,16 +367,16 @@ EXTERN EMSCRIPTEN_KEEPALIVE void fft_spectre(double *realBuffer, double *imgBuff
 		//spectre[i] = sqrt((realBuffer[i] * realBuffer[i]) + (imgBuffer[i] * imgBuffer[i]));
 	}
 
-  unsigned char *raw = 0;
+  	unsigned char *raw = 0;
 	normalizaBufferDouble2Uchar(spectre, &raw, sizeBuffer, 255);
 
-  unsigned char *imgOut = 0;
-  assemblyImageByQuadrantsUchar(raw, width, height, &imgOut);
+	unsigned char *imgOut = 0;
+	assemblyImageByQuadrantsUchar(raw, width, height, &imgOut);
 
-  memcpy(spectre_normalized, imgOut, sizeBuffer * sizeof(unsigned char));
+	memcpy(spectre_normalized, imgOut, sizeBuffer * sizeof(unsigned char));
 
-  delete [] imgOut;
-  delete [] raw;
+	delete [] imgOut;
+	delete [] raw;
 }
 
 

@@ -10,12 +10,12 @@
     Module.onRuntimeInitialized = async () => {
         const api = {
         get_version: Module.cwrap("get_version", "number", []),
-        create_buffer: Module.cwrap("create_buffer", "number", ["number", "number"]),
-        destroy_buffer: Module.cwrap("destroy_buffer", "", ["number"]),
 
+        create_uchar_buffer: Module.cwrap("create_uchar_buffer", "number", ["number"]),
+        destroy_uchar_buffer: Module.cwrap("destroy_buffer", "", ["number"]),
         create_double_buffer: Module.cwrap("create_double_buffer", "number", ["number"]),
         destroy_double_buffer: Module.cwrap("destroy_double_buffer", "", ["number"]),
-        print_double_buffer : Module.cwrap("print_double_buffer", "", ["number", "number"]),
+        print_buffer : Module.cwrap("print_buffer", "", ["number", "number"]),
 
         fft_forward: Module.cwrap("fft_forward", "number", ["number","number","number", "number", "number"]),
         fft_backward: Module.cwrap("fft_backward", "number", ["number","number","number", "number", "number"]),
@@ -129,10 +129,10 @@
                         const ptr_real_part = api.create_double_buffer(img.width * img.height);                            
                         const ptr_imag_part = api.create_double_buffer(img.width * img.height);
 
-                        const ptr_img = api.create_buffer(img.width, img.height);
+                        const ptr_img = api.create_uchar_buffer(img.width * img.height);
                         Module.HEAP8.set(pixels, ptr_img);
                         api.fft_forward(ptr_img, img.width, img.height, ptr_real_part, ptr_imag_part );
-                        api.destroy_buffer(ptr_img);
+                        api.destroy_uchar_buffer(ptr_img);
 
                         var real_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_real_part, img.width * img.height);
                         var imag_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_imag_part, img.width * img.height);
@@ -155,7 +155,7 @@
                         //     console.log(error);                     
                         // });
 
-                        const output_img = api.create_buffer(img.width, img.height);
+                        const output_img = api.create_uchar_buffer(img.width * img.height);
                         const output_spectre = api.create_double_buffer(img.width * img.height);
 
                         api.fft_spectre(ptr_real_part, ptr_imag_part, output_spectre, output_img, img.width , img.height);
