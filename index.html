@@ -32,117 +32,11 @@
             }
         });
     });
-
-
-    
-    // function initialize()
-    // {
-    //     const img = new Image(); // Create new img element
-        
-
-    //     img.addEventListener("load", () => {
-
-    //         getPixels(img).then(
-    //             (pixels) => 
-    //             {
-    //                 if(pixels)
-    //                 {
-    //                     const ptr_real_part = api.create_double_buffer(img.width * img.height);                            
-    //                     const ptr_imag_part = api.create_double_buffer(img.width * img.height);
-
-    //                     const ptr_img = api.create_uchar_buffer(img.width * img.height);
-    //                     Module.HEAP8.set(pixels, ptr_img);
-    //                     api.fft_forward(ptr_img, img.width, img.height, ptr_real_part, ptr_imag_part );
-    //                     api.destroy_uchar_buffer(ptr_img);
-
-    //                     var real_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_real_part, img.width * img.height);
-    //                     var imag_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_imag_part, img.width * img.height);
-
-    //                     //api.destroy_double_buffer(ptr_real_part);
-    //                     //api.destroy_double_buffer(ptr_imag_part);
-
-    //                     // const output_img = api.create_buffer(img.width, img.height);
-    //                     // api.fft_backward(ptr_real_part, ptr_imag_part, output_img, img.width, img.height);
-    //                     // var pixels_backward = new Uint8Array(Module.HEAP8.buffer, output_img, img.width * img.height);
-
-    //                     // getImageFromPixels(pixels_backward, img.width, img.height).then(
-    //                     // (outputImg) => 
-    //                     // {
-    //                     //     document.body.appendChild(outputImg);
-    //                     // },
-    //                     // (error) => 
-    //                     // {
-    //                     //     console.error("Erro ao montar a imagem a partir dos pixels");
-    //                     //     console.log(error);                     
-    //                     // });
-
-    //                     const output_img = api.create_uchar_buffer(img.width * img.height);
-    //                     const output_spectre = api.create_double_buffer(img.width * img.height);
-
-    //                     api.fft_spectre(ptr_real_part, ptr_imag_part, output_spectre, output_img, img.width , img.height);
-    //                     var pixels_spectre = new Uint8Array(Module.HEAP8.buffer, output_img, img.width * img.height);
-
-    //                     api.destroy_double_buffer(output_img);
-    //                     api.destroy_double_buffer(output_spectre);
-
-    //                     getImageFromPixels(pixels_spectre, img.width, img.height).then(
-    //                     (outputImg) => 
-    //                     {
-    //                         document.body.appendChild(outputImg);
-    //                     },
-    //                     (error) => 
-    //                     {
-    //                         console.error("Erro ao montar a imagem a partir do escpectro");
-    //                         console.log(error);                     
-    //                     });
-                        
-
-
-
-                        
-    //                 }
-
-    //             }, 
-    //             (error) => 
-    //             {
-    //                 console.error("Erro ao pegar os pixels da imagem");
-    //                 console.log(error);                     
-    //             }
-    //         );
-        
-    //     });
-    //     img.src = "palhaco.jpg"; // Set source path    
-    // }
-
-    //initialize();
-
-    //};
-
- 
-   
   
 </script>
-
-
 </head>
 <body>
-
-<input type="file" id="imgFile" accept="image/png, image/jpeg"/>
-
-<table style="width: 100%;height: 600px;">
-    <tr>
-        <td>
-            <canvas id="fftEditorCanvas" width="512" height="512"></canvas>
-        </td>
-        <td>
-            <canvas style="width: 512px; height: 512px;" id="fftOutputImage"></canvas>
-        </td>
-    </tr>
-</table>
-
-
-
-
-
+    <input type="file" id="imgFile" accept="image/png, image/jpeg" title="image"/>
+    <div ffteditor="1"></div>
 </body>
 </html>

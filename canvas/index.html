@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>My Website</title>
+
+    <script>
+
+        class tool
+        {
+            constructor(data) {
+                this.pdata = data;
+            }
+            onmousedown(e){ throw "Not implemented"};
+            onmouseup(e){ throw "Not implemented"};
+            onmousemove(e){ throw "Not implemented"};
+            onmouseout(e){ throw "Not implemented"};
+        }
+
+        class pantool extends tool
+        {
+            constructor(data) {
+                super(data);
+                this.down = null;
+            }
+
+            onmousedown(e){ this.down = e;  };
+            onmouseup(e){ this.down = null; };
+            onmousemove(e)
+            {
+                if(this.down)
+                {
+                    let dx = e.clientX - this.down.clientX;
+                    let dy = e.clientY - this.down.clientY;
+                    this.pdata.tx += dx;
+                    this.pdata.ty += dy;
+                    this.down = e;
+                }
+            };
+
+            onmouseout(e){ this.down = null; };
+        }
+
+        class erasetool extends tool
+        {
+            constructor(data) {
+                super(data);
+            }
+
+            onmousedown(e){ console.log("erasetool:" + e)};
+            onmouseup(e){ console.log("erasetool:" + e)};
+            onmousemove(e){ console.log("erasetool:" + e)};
+            onmouseout(e){ console.log("erasetool:" + e)};
+        }
+
+        class paintdata
+        {
+            constructor() {
+                this.tx = 0;
+                this.ty = 0;
+            }            
+        }
+
+
+        window.addEventListener("load", (e) => {
+            
+            let pdata = new paintdata();
+
+            const image = new Image();
+            image.addEventListener("load", (e) => { paint(); });
+            image.src = 'goku.jpg'
+
+            let tool = new pantool(pdata);
+            let canvas = document.getElementById("canvas");
+
+            canvas.onselectstart = function () { return false; }
+
+            canvas.addEventListener("mousedown", (e) => 
+            {
+                tool.onmousedown(e);
+                paint();
+            });
+
+            canvas.addEventListener("mouseup", (e) => 
+            {
+                //console.log(e);
+
+                tool.onmouseup(e);
+                paint();
+            });
+
+            canvas.addEventListener("mousemove", (e) => 
+            {
+                tool.onmousemove(e);
+                paint();
+            });
+
+            canvas.addEventListener("mouseout", (e) => 
+            {
+                tool.onmouseout(e);
+                paint();
+            });
+            
+            function paint()
+            {
+                const ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(image, pdata.tx, pdata.ty, image.width, image.height);
+            }
+
+
+            
+
+
+        });
+
+    </script>
+
+  </head>
+  <body>
+    <main>
+        <h1>Welcome to My Website</h1>  
+    </main>
+	<canvas style="border: solid; border-width: 1px;" id="canvas" width="500px" height="500px"></canvas>
+  </body>
+</html>
