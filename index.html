@@ -10,34 +10,12 @@
 <script>
 
     window.addEventListener("load", (event) => {
-
         const editor = new ffteditor();
-
-        let imgFile = document.getElementById('imgFile');
-
-        imgFile.addEventListener("cancel", () => {
-            console.log("Cancelled.");
-        });
-
-        imgFile.addEventListener("change", (e) => {
-            if (imgFile.files.length == 1) {
-                console.log("File selected: ", imgFile.files[0]);
-
-                
-                var img = new Image;
-                img.onload = function() {
-                    editor.setImage(img);
-                }
-                img.src = URL.createObjectURL(e.target.files[0]);
-
-            }
-        });
     });
   
 </script>
 </head>
-<body>
-    <input type="file" id="imgFile" accept="image/png, image/jpeg" title="image"/>
+<body>    
     <div ffteditor="1"></div>
 </body>
 </html>

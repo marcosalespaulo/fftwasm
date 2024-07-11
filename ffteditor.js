@@ -67,6 +67,7 @@ class ffteditor {
         this.pdata = new paintdata();
         this.tool = new pantool(this.pdata);
 
+        const instance = this;
         const collection = document.querySelectorAll('[ffteditor]');
 
         for(let i = 0 ; i < collection.length ; i++)
@@ -75,7 +76,16 @@ class ffteditor {
 
             let table =
             '<table style="width: 100%;height: 600px;">'+
-            '    <tr><td colspan="2"><div class="btn-group"><button id="btnPan'+this.id+'">Pan</button><button id="btnErase'+this.id+'">Erase</button></div></td></tr>'+
+            '    <tr>'+
+            '        <td colspan="2">'+
+            '            <div class="btn-group">'+
+            '               <button id="btnFile'+ this.id+'" for="imgFile'+ this.id+'">File</button>'+
+            '               <input type="file" id="imgFile'+ this.id+'" accept="image/png, image/jpeg" title="image"/>'+
+            '               <button id="btnPan'+this.id+'">Pan</button>'+
+            '               <button id="btnErase'+this.id+'">Erase</button>'+
+            '            </div>'+
+            '        </td>'+
+            '    </tr>'+
             '    <tr>'+
             '        <td>'+
             '            <canvas style="border:1px solid #000000;" id="fftEditorCanvas'+ this.id +'" width="512" height="512"></canvas>'+
@@ -90,9 +100,33 @@ class ffteditor {
         }
 
         this.editorCanvas = document.getElementById('fftEditorCanvas'+ this.id);
-        this.outputCanvas = document.getElementById('fftOutputImage'+ this.id);
+        this.outputCanvas = document.getElementById('fftOutputImage'+ this.id);       
 
         this.addCanvasEventListener(this.editorCanvas);
+
+        document.getElementById('btnFile'+ this.id).addEventListener("click", (e) => 
+        {
+            document.getElementById('imgFile'+ this.id).click();
+        });
+
+
+        document.getElementById('imgFile'+ this.id).addEventListener("cancel", () => {
+            console.log("Cancelled.");
+        });
+
+        document.getElementById('imgFile'+ this.id).addEventListener("change", (e) => {
+            if (document.getElementById('imgFile'+ this.id).files.length == 1) {
+                console.log("File selected: ", document.getElementById('imgFile'+ this.id).files[0]);
+
+                var img = new Image;
+                img.onload = function() {
+                    instance.setImage(img);
+                }
+                img.src = URL.createObjectURL(e.target.files[0]);
+
+            }
+        });
+
 
         document.getElementById('btnPan'+ this.id).addEventListener("click", (e) => 
         {
@@ -103,6 +137,8 @@ class ffteditor {
         {
             this.tool = new erasetool(this.pdata);
         });
+
+       
 
 
 
