@@ -75,6 +75,7 @@ class ffteditor {
 
             let table =
             '<table style="width: 100%;height: 600px;">'+
+            '    <tr><td colspan="2"><div class="btn-group"><button id="btnPan'+this.id+'">Pan</button><button id="btnErase'+this.id+'">Erase</button></div></td></tr>'+
             '    <tr>'+
             '        <td>'+
             '            <canvas style="border:1px solid #000000;" id="fftEditorCanvas'+ this.id +'" width="512" height="512"></canvas>'+
@@ -92,6 +93,21 @@ class ffteditor {
         this.outputCanvas = document.getElementById('fftOutputImage'+ this.id);
 
         this.addCanvasEventListener(this.editorCanvas);
+
+        document.getElementById('btnPan'+ this.id).addEventListener("click", (e) => 
+        {
+            this.tool = new pantool(this.pdata);
+        });
+
+        document.getElementById('btnErase'+ this.id).addEventListener("click", (e) => 
+        {
+            this.tool = new erasetool(this.pdata);
+        });
+
+
+
+
+
                
     }
 
@@ -113,7 +129,6 @@ class ffteditor {
         };
         console.log('FFTWasm Version:'+ffteditor.api.get_version());
     }
-
 
     addCanvasEventListener(canvas)
     {
