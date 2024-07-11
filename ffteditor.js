@@ -122,7 +122,8 @@ class ffteditor {
         canvas.addEventListener("mousedown", (e) => 
         {
             this.tool.onmousedown(e);
-            this.paint();
+            this.paintEditor();
+            this.paintOutput();
         });
 
         canvas.addEventListener("mouseup", (e) => 
@@ -130,38 +131,43 @@ class ffteditor {
             //console.log(e);
 
             this.tool.onmouseup(e);
-            this.paint();
+            this.paintEditor();
+            this.paintOutput();
         });
 
         canvas.addEventListener("mousemove", (e) => 
         {
             this.tool.onmousemove(e);
-            this.paint();
+            this.paintEditor();
+            this.paintOutput();
         });
 
         canvas.addEventListener("mouseout", (e) => 
         {
             this.tool.onmouseout(e);
-            this.paint();
+            this.paintEditor();
+            this.paintOutput();
         });
 
     }
 
-    paint()
+    paintEditor()
     {
         if(this.spectre && this.editorCanvas && this.pdata)
         {
             let ctx = this.editorCanvas.getContext("2d");
             ctx.clearRect(0, 0, this.editorCanvas.width, this.editorCanvas.height);
             ctx.drawImage(this.spectre, this.pdata.tx, this.pdata.ty, this.spectre.width, this.spectre.height);
+        }
+    }
 
-
-            if(this.outputimage)
-            {
-                ctx = this.outputCanvas.getContext("2d");
-                ctx.clearRect(0, 0, this.outputCanvas.width, this.outputCanvas.height);
-                ctx.drawImage(this.outputimage, this.pdata.tx, this.pdata.ty, this.outputimage.width, this.outputimage.height);
-            }
+    paintOutput()
+    {
+        if(this.outputimage && this.pdata)
+        {
+            let ctx = this.outputCanvas.getContext("2d");
+            ctx.clearRect(0, 0, this.outputCanvas.width, this.outputCanvas.height);
+            ctx.drawImage(this.outputimage, this.pdata.tx, this.pdata.ty, this.outputimage.width, this.outputimage.height);
         }
     }
 
@@ -370,11 +376,12 @@ class ffteditor {
                 this.spectre = outputImg;
                 this.pdata.tx = (this.editorCanvas.width - outputImg.width) / 2;
                 this.pdata.ty = (this.editorCanvas.height - outputImg.height) / 2;
+                this.paintEditor();
 
                 this.fft_backward(fft_result.real, fft_result.imag, fft_result.width, fft_result.height).then((backward) => 
                 {
                     this.outputimage = backward;
-                    this.paint();
+                    this.paintOutput();
                 },
                 (error) => 
                 {
