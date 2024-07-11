@@ -1,3 +1,58 @@
+class tool
+{
+    constructor(data) {
+        this.pdata = data;
+    }
+    onmousedown(e){ throw "Not implemented"};
+    onmouseup(e){ throw "Not implemented"};
+    onmousemove(e){ throw "Not implemented"};
+    onmouseout(e){ throw "Not implemented"};
+}
+
+class pantool extends tool
+{
+    constructor(data) {
+        super(data);
+        this.down = null;
+    }
+
+    onmousedown(e){ this.down = e;  };
+    onmouseup(e){ this.down = null; };
+    onmousemove(e)
+    {
+        if(this.down)
+        {
+            let dx = e.clientX - this.down.clientX;
+            let dy = e.clientY - this.down.clientY;
+            this.pdata.tx += dx;
+            this.pdata.ty += dy;
+            this.down = e;
+        }
+    };
+
+    onmouseout(e){ this.down = null; };
+}
+
+class erasetool extends tool
+{
+    constructor(data) {
+        super(data);
+    }
+
+    onmousedown(e){ console.log("erasetool:" + e)};
+    onmouseup(e){ console.log("erasetool:" + e)};
+    onmousemove(e){ console.log("erasetool:" + e)};
+    onmouseout(e){ console.log("erasetool:" + e)};
+}
+
+class paintdata
+{
+    constructor() {
+        this.tx = 0;
+        this.ty = 0;
+    }            
+}
+
 class ffteditor {
 
     static api = null;
@@ -5,6 +60,13 @@ class ffteditor {
     constructor() {
 
         this.id = 1;
+        this.image = null;
+        this.spectre = null;
+        this.outputimage = null;
+
+        this.pdata = new paintdata();
+        this.tool = new pantool(this.pdata);
+
         const collection = document.querySelectorAll('[ffteditor]');
 
         for(let i = 0 ; i < collection.length ; i++)
@@ -15,10 +77,10 @@ class ffteditor {
             '<table style="width: 100%;height: 600px;">'+
             '    <tr>'+
             '        <td>'+
-            '            <canvas id="fftEditorCanvas'+ this.id +'" width="512" height="512"></canvas>'+
+            '            <canvas style="border:1px solid #000000;" id="fftEditorCanvas'+ this.id +'" width="512" height="512"></canvas>'+
             '        </td>'+
             '        <td>'+
-            '            <canvas id="fftOutputImage'+ this.id +'" width="512" height="512"></canvas>'+
+            '            <canvas style="border:1px solid #000000;" id="fftOutputImage'+ this.id +'" width="512" height="512"></canvas>'+
             '        </td>'+
             '    </tr>'+
             '</table>';
@@ -28,6 +90,8 @@ class ffteditor {
 
         this.editorCanvas = document.getElementById('fftEditorCanvas'+ this.id);
         this.outputCanvas = document.getElementById('fftOutputImage'+ this.id);
+
+        this.addCanvasEventListener(this.editorCanvas);
                
     }
 
@@ -48,6 +112,57 @@ class ffteditor {
             fft_spectre: Module.cwrap("fft_spectre", "", ["number","number","number", "number", "number", "number"]),       
         };
         console.log('FFTWasm Version:'+ffteditor.api.get_version());
+    }
+
+
+    addCanvasEventListener(canvas)
+    {
+        canvas.onselectstart = function () { return false; }
+
+        canvas.addEventListener("mousedown", (e) => 
+        {
+            this.tool.onmousedown(e);
+            this.paint();
+        });
+
+        canvas.addEventListener("mouseup", (e) => 
+        {
+            //console.log(e);
+
+            this.tool.onmouseup(e);
+            this.paint();
+        });
+
+        canvas.addEventListener("mousemove", (e) => 
+        {
+            this.tool.onmousemove(e);
+            this.paint();
+        });
+
+        canvas.addEventListener("mouseout", (e) => 
+        {
+            this.tool.onmouseout(e);
+            this.paint();
+        });
+
+    }
+
+    paint()
+    {
+        if(this.spectre && this.editorCanvas && this.pdata)
+        {
+            let ctx = this.editorCanvas.getContext("2d");
+            ctx.clearRect(0, 0, this.editorCanvas.width, this.editorCanvas.height);
+            ctx.drawImage(this.spectre, this.pdata.tx, this.pdata.ty, this.spectre.width, this.spectre.height);
+
+
+            if(this.outputimage)
+            {
+                ctx = this.outputCanvas.getContext("2d");
+                ctx.clearRect(0, 0, this.outputCanvas.width, this.outputCanvas.height);
+                ctx.drawImage(this.outputimage, this.pdata.tx, this.pdata.ty, this.outputimage.width, this.outputimage.height);
+            }
+        }
     }
 
     getPixels(inputImage)
@@ -163,12 +278,12 @@ class ffteditor {
             this.getImageFromPixels(pixels_backward, width, height).then(
             (outputImg) => 
             {
-                this.setCanvasImage(this.outputCanvas, outputImg);
+                resolve(outputImg);                
             },
             (error) => 
             {
                 console.error("Erro ao montar a imagem a partir dos pixels");
-                console.log(error);                     
+                reject(error);
             });
         });
     }
@@ -245,114 +360,39 @@ class ffteditor {
 
     setImage(img)
     {
+        this.image = img;
+
         this.fft_forward(img).then((fft_result) => 
         {
             this.getImageFromPixels(fft_result.spectre_raw, fft_result.width, fft_result.height).then(
             (outputImg) => 
             {
-                this.setCanvasImage(this.editorCanvas, outputImg);     
-                
-                this.fft_backward(fft_result.real, fft_result.imag, fft_result.width, fft_result.height);
+                this.spectre = outputImg;
+                this.pdata.tx = (this.editorCanvas.width - outputImg.width) / 2;
+                this.pdata.ty = (this.editorCanvas.height - outputImg.height) / 2;
+
+                this.fft_backward(fft_result.real, fft_result.imag, fft_result.width, fft_result.height).then((backward) => 
+                {
+                    this.outputimage = backward;
+                    this.paint();
+                },
+                (error) => 
+                {
+                    console.error("Erro ao fazer a fft inversa");
+                    console.log(error);                     
+                });
             },
             (error) => 
             {
                 console.error("Erro ao montar a imagem a partir do espectro");
                 console.log(error);                     
             }); 
-
-            
-
         }, 
         (error) => 
         {
             console.log(error);                     
         });
-
-
-
-
-        // this.getPixels(img).then((pixels) =>
-        // {
-        //     if(pixels)
-        //     {
-        //         const ptr_real_part = ffteditor.api.create_double_buffer(img.width * img.height);                            
-        //         const ptr_imag_part = ffteditor.api.create_double_buffer(img.width * img.height);
-
-        //         const ptr_img = ffteditor.api.create_uchar_buffer(img.width * img.height);
-        //         Module.HEAP8.set(pixels, ptr_img);
-        //         ffteditor.api.fft_forward(ptr_img, img.width, img.height, ptr_real_part, ptr_imag_part );
-        //         ffteditor.api.destroy_uchar_buffer(ptr_img);
-
-        //         var real_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_real_part, img.width * img.height);
-        //         var imag_output_array = new Float64Array(Module.HEAPF64.buffer, ptr_imag_part, img.width * img.height);
-               
-
-        //         const output_img_spectre = ffteditor.api.create_uchar_buffer(img.width * img.height);
-        //         const output_spectre = ffteditor.api.create_double_buffer(img.width * img.height);
-
-        //         ffteditor.api.fft_spectre(ptr_real_part, ptr_imag_part, output_spectre, output_img_spectre, img.width , img.height);
-        //         var pixels_spectre = new Uint8Array(Module.HEAP8.buffer, output_img_spectre, img.width * img.height);
-
-        //         ffteditor.api.destroy_double_buffer(output_img_spectre);
-        //         ffteditor.api.destroy_double_buffer(output_spectre);
-
-        //         ffteditor.api.destroy_double_buffer(ptr_real_part);
-        //         ffteditor.api.destroy_double_buffer(ptr_imag_part);
-
-        //         this.getImageFromPixels(pixels_spectre, img.width, img.height).then(
-        //         (outputImg) => 
-        //         {
-        //             this.setCanvasImage(this.editorCanvas, outputImg);
-        //         },
-        //         (error) => 
-        //         {
-        //             console.error("Erro ao montar a imagem a partir do escpectro");
-        //             console.log(error);                     
-        //         });
-
-
-
-
-
-        //         // const ptr_output_img_backward = ffteditor.api.create_uchar_buffer(img.width * img.height);
-        //         // ffteditor.api.fft_backward(ptr_real_part, ptr_imag_part, ptr_output_img_backward, img.width, img.height);
-        //         // var pixels_backward = new Uint8Array(Module.HEAP8.buffer, ptr_output_img_backward, img.width * img.height);
-        //         // ffteditor.api.destroy_uchar_buffer(ptr_output_img_backward);
-
-
-        //         // this.getImageFromPixels(pixels_backward, img.width, img.height).then(
-        //         // (outputImg) => 
-        //         // {
-        //         //     this.setCanvasImage(this.outputCanvas, outputImg);
-        //         // },
-        //         // (error) => 
-        //         // {
-        //         //     console.error("Erro ao montar a imagem a partir dos pixels");
-        //         //     console.log(error);                     
-        //         // });
-
-               
-        //     }
-        // },
-        // (error) => 
-        // {
-        //     console.error("Erro ao pegar os pixels da imagem");
-        //     console.log(error);                     
-        // });        
     }
-
-    setCanvasImage(canvas, img)
-    {
-        if(canvas)
-        {
-            let ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, img.width, img.height);
-        }
-        else
-            throw "Nenhum canvas encontrado com o id:" + canvasId;
-    }
-
-
 }
 
 Module.onRuntimeInitialized = ffteditor.initialize;
