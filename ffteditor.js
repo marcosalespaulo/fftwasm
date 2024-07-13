@@ -37,13 +37,43 @@ class erasetool extends tool {
 
     onmousedown(e) 
     {
-         this.down = e; 
-         this.pdata.erasedPoints.push({ "x" : e.clientX, "y" : e.clientY});
+         const rect = e.currentTarget.getBoundingClientRect();
+         const x = e.clientX - rect.left;
+         const y = e.clientY - rect.top;
+
+         //convert canvas point to image point
+         const ximg = x - (this.pdata.tx);
+         const yimg = y - (this.pdata.ty);
+
+         //check if point is on image
+         if(ximg > 0 && ximg < this.pdata.imageWidth)
+         {
+            if(yimg > 0 && yimg < this.pdata.imageHeight)
+            {
+                this.pdata.erasedPoints.push({ "x" : ximg, "y" : yimg});
+                this.down = e; 
+            }
+         }
     };
-    onmouseup(e) { this.down = null; console.log(this.pdata.erasedPoints); this.pdata.erasedPoints = []; };
+    onmouseup(e) { this.down = null; };
     onmousemove(e) {
         if (this.down) {
-            this.pdata.erasedPoints.push({ "x" : e.clientX, "y" : e.clientY});
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            //convert canvas point to image point
+            const ximg = x - (this.pdata.tx);
+            const yimg = y - (this.pdata.ty);
+
+            //check if point is on image
+            if(ximg > 0 && ximg < this.pdata.imageWidth)
+            {
+                if(yimg > 0 && yimg < this.pdata.imageHeight)
+                {
+                    this.pdata.erasedPoints.push({ "x" : ximg, "y" : yimg});
+                }
+            }
         }
     };
 
@@ -54,6 +84,8 @@ class paintdata {
     constructor() {
         this.tx = 0;
         this.ty = 0;
+        this.imageWidth = 0;
+        this.imageHeight = 0;
         this.erasedPoints = [];
     }
 }
@@ -66,8 +98,10 @@ class ffteditor {
 
         this.id = 1;
         this.image = null;
+        this.originalimage = null;
         this.spectre = null;
         this.outputimage = null;
+        this.fft_result = null;
 
         this.pdata = new paintdata();
         this.tool = new pantool(this.pdata);
@@ -163,28 +197,54 @@ class ffteditor {
 
         canvas.addEventListener("mousedown", (e) => {
             this.tool.onmousedown(e);
-            this.paintEditor();
-            this.paintOutput();
+            this.paintAll();
         });
 
         canvas.addEventListener("mouseup", (e) => {
-            //console.log(e);
-
             this.tool.onmouseup(e);
-            this.paintEditor();
-            this.paintOutput();
+            this.paintAll();
+
+            if(this.tool instanceof erasetool && this.fft_result)
+            {
+                if(this.pdata && this.pdata.erasedPoints.length > 0)
+                {
+                    //{ "real": real_output_array, "imag": imag_output_array, "spectre_raw": pixels_spectre, "width": img.width, "height": img.height }
+
+                    // let index = -1;
+                    // for(let i = 0 ; i < this.pdata.erasedPoints.length ; i++)
+                    // {
+                    //     // w *i + j
+                    //     index = (this.fft_result.width * (this.pdata.erasedPoints[i].y - 1)) + (this.pdata.erasedPoints[i].x - 1);                        
+                    //     this.fft_result.real[index] = 0;
+                    //     this.fft_result.imag[index] = 0;
+                    // }
+
+                    
+                    for(let i = 0 ; i < this.fft_result.real.length ; i+=2)
+                    {
+                        this.fft_result.real[i] = 0;
+                        this.fft_result.imag[i] = 0;
+                    }
+
+                    this.fft_backward(this.fft_result.real, this.fft_result.imag, this.fft_result.width, this.fft_result.height).then((backward) => {
+                        this.outputimage = backward;
+                        this.paintOutput();
+                    },(error) => {
+                        console.error("Erro ao fazer a fft inversa");
+                        console.log(error);
+                    });
+                }
+            }
         });
 
         canvas.addEventListener("mousemove", (e) => {
             this.tool.onmousemove(e);
-            this.paintEditor();
-            this.paintOutput();
+            this.paintAll();
         });
 
         canvas.addEventListener("mouseout", (e) => {
             this.tool.onmouseout(e);
-            this.paintEditor();
-            this.paintOutput();
+            this.paintAll();
         });
 
     }
@@ -194,6 +254,18 @@ class ffteditor {
             let ctx = this.editorCanvas.getContext("2d");
             ctx.clearRect(0, 0, this.editorCanvas.width, this.editorCanvas.height);
             ctx.drawImage(this.spectre, this.pdata.tx, this.pdata.ty, this.spectre.width, this.spectre.height);
+
+
+            if(this.pdata.erasedPoints.length > 0)
+            {
+                ctx.fillStyle = "rgba(255, 0, 0, 0.2)";
+                for(let i = 0; i <this.pdata.erasedPoints.length ; i++)
+                {
+                    ctx.beginPath();
+                    ctx.arc(this.pdata.erasedPoints[i].x + this.pdata.tx, this.pdata.erasedPoints[i].y + this.pdata.ty, 1, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                }
+            }
         }
     }
 
@@ -203,6 +275,63 @@ class ffteditor {
             ctx.clearRect(0, 0, this.outputCanvas.width, this.outputCanvas.height);
             ctx.drawImage(this.outputimage, this.pdata.tx, this.pdata.ty, this.outputimage.width, this.outputimage.height);
         }
+    }
+
+
+    paintAll()
+    {
+        this.paintEditor();
+        this.paintOutput();
+    }
+
+    preProcessingImage(img)
+    {
+        return new Promise((resolve, reject) => {
+
+            if(img)
+            {
+                let side = img.width;
+                const isSquare = img.width == img.height;
+
+                if (!isSquare)
+                {
+                    side = img.width;
+                    if (side < img.height)
+                        side = img.height;
+                }
+
+                for (let i = 0; i < 100; i++)
+                {
+                    let multipleOfTwo = parseInt(Math.pow(2, i) + 0.5);
+                    if(multipleOfTwo >= side)
+                    {
+                        side = multipleOfTwo;
+                        break;
+                    }                
+                }
+
+                let canvas = document.createElement('canvas');
+                canvas.width = side;
+                canvas.height = side;
+
+                let ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, (side - img.width)/ 2, (side - img.height)/ 2, img.width, img.height);
+
+                const outputImage = new Image();
+                outputImage.addEventListener("load", () => {
+                    resolve(outputImage);
+                });
+                outputImage.src = canvas.toDataURL();
+            }
+            else
+            {
+                reject("Erro, a imagem não pode ser nula");
+            }
+        });
     }
 
     getPixels(inputImage) {
@@ -293,7 +422,6 @@ class ffteditor {
         });
     }
 
-
     fft_backward(real, imag, width, height) {
         return new Promise((resolve, reject) => {
 
@@ -322,7 +450,6 @@ class ffteditor {
                 });
         });
     }
-
 
     fft_forward(img) {
         return new Promise((resolve, reject) => {
@@ -353,69 +480,55 @@ class ffteditor {
                     ffteditor.api.destroy_double_buffer(ptr_imag_part);
 
                     resolve({ "real": real_output_array, "imag": imag_output_array, "spectre_raw": pixels_spectre, "width": img.width, "height": img.height });
-
-
-
-                    // const ptr_output_img_backward = ffteditor.api.create_uchar_buffer(img.width * img.height);
-                    // ffteditor.api.fft_backward(ptr_real_part, ptr_imag_part, ptr_output_img_backward, img.width, img.height);
-                    // var pixels_backward = new Uint8Array(Module.HEAP8.buffer, ptr_output_img_backward, img.width * img.height);
-                    // ffteditor.api.destroy_uchar_buffer(ptr_output_img_backward);
-
-
-                    // this.getImageFromPixels(pixels_backward, img.width, img.height).then(
-                    // (outputImg) => 
-                    // {
-                    //     this.setCanvasImage(this.outputCanvas, outputImg);
-                    // },
-                    // (error) => 
-                    // {
-                    //     console.error("Erro ao montar a imagem a partir dos pixels");
-                    //     console.log(error);                     
-                    // });
-
-
                 }
                 else {
                     reject("getPixels não retornou pixels válidos");
                 }
-            },
-                (error) => {
+            },(error) => {
                     console.error("Erro ao pegar os pixels da imagem");
                     reject(error);
-                });
+            });
         });
 
 
     }
 
-    setImage(img) {
-        this.image = img;
+    setImage(original) {
+        this.originalimage = original;
 
-        this.fft_forward(img).then((fft_result) => {
-            this.getImageFromPixels(fft_result.spectre_raw, fft_result.width, fft_result.height).then(
-                (outputImg) => {
-                    this.spectre = outputImg;
-                    this.pdata.tx = (this.editorCanvas.width - outputImg.width) / 2;
-                    this.pdata.ty = (this.editorCanvas.height - outputImg.height) / 2;
-                    this.paintEditor();
+        this.preProcessingImage(original).then((processedImage) => 
+        {
+            this.image = processedImage;
 
-                    this.fft_backward(fft_result.real, fft_result.imag, fft_result.width, fft_result.height).then((backward) => {
-                        this.outputimage = backward;
-                        this.paintOutput();
-                    },
-                        (error) => {
-                            console.error("Erro ao fazer a fft inversa");
-                            console.log(error);
+            this.fft_forward(this.image).then((fft_result) => {
+                this.fft_result = fft_result;
+                this.getImageFromPixels(fft_result.spectre_raw, fft_result.width, fft_result.height).then(
+                    (outputImg) => {
+                        this.spectre = outputImg;
+                        this.pdata.imageWidth = outputImg.width;
+                        this.pdata.imageHeight = outputImg.height;
+                        this.pdata.tx = (this.editorCanvas.width - outputImg.width) / 2;
+                        this.pdata.ty = (this.editorCanvas.height - outputImg.height) / 2;
+                        this.paintEditor();
+    
+                        this.fft_backward(fft_result.real, fft_result.imag, fft_result.width, fft_result.height).then((backward) => {
+                            this.outputimage = backward;
+                            this.paintOutput();
+                        },(error) => {
+                                console.error("Erro ao fazer a fft inversa");
+                                console.log(error);
                         });
-                },
-                (error) => {
-                    console.error("Erro ao montar a imagem a partir do espectro");
-                    console.log(error);
-                });
-        },
-            (error) => {
+                    },(error) => {
+                        console.error("Erro ao montar a imagem a partir do espectro");
+                        console.log(error);
+                    });
+            }, (error) => {
                 console.log(error);
             });
+
+        }, (error) => {
+            console.log(error);
+        });
     }
 }
 
