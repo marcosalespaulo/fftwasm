@@ -50,8 +50,27 @@ class erasetool extends tool {
          {
             if(yimg > 0 && yimg < this.pdata.imageHeight)
             {
-                this.pdata.erasedPoints.push({ "x" : ximg, "y" : yimg});
-                this.down = e; 
+                let inside = false;
+
+                if(this.pdata.erasedPoints.length > 0)
+                {
+                    for(let i = 0 ; i < this.pdata.erasedPoints.length ; i++)
+                    {
+                        if(!this.isPointInCircuference(ximg, yimg, this.pdata.erasedPoints[i].x, this.pdata.erasedPoints[i].y, this.pdata.radiusErased))
+                            this.down = e; 
+                        else
+                        {
+                            inside = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(!inside)
+                {
+                    this.down = e; 
+                    this.pdata.erasedPoints.push({ "x" : ximg, "y" : yimg});
+                }
             }
          }
     };
@@ -71,13 +90,39 @@ class erasetool extends tool {
             {
                 if(yimg > 0 && yimg < this.pdata.imageHeight)
                 {
-                    this.pdata.erasedPoints.push({ "x" : ximg, "y" : yimg});
+                    let inside = false;
+
+                    if(this.pdata.erasedPoints.length > 0)
+                    {
+                        for(let i = 0 ; i < this.pdata.erasedPoints.length ; i++)
+                        {
+                            if(!this.isPointInCircuference(ximg, yimg, this.pdata.erasedPoints[i].x, this.pdata.erasedPoints[i].y, this.pdata.radiusErased))
+                                this.down = e; 
+                            else
+                            {
+                                inside = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if(!inside)
+                    {
+                        this.down = e; 
+                        this.pdata.erasedPoints.push({ "x" : ximg, "y" : yimg});
+                    }
                 }
             }
         }
     };
 
     onmouseout(e) { this.down = null; };
+
+    isPointInCircuference(x, y, xc, yc, r)
+    {
+        //(x - xc)^2 + (y - yc)^2 >= R^2
+        return (Math.pow(x - xc, 2) + Math.pow(y - yc, 2) <= Math.pow(r, 2))
+    }
 }
 
 class paintdata {
@@ -87,6 +132,7 @@ class paintdata {
         this.imageWidth = 0;
         this.imageHeight = 0;
         this.erasedPoints = [];
+        this.radiusErased = 10;
     }
 }
 
@@ -262,7 +308,7 @@ class ffteditor {
                 for(let i = 0; i <this.pdata.erasedPoints.length ; i++)
                 {
                     ctx.beginPath();
-                    ctx.arc(this.pdata.erasedPoints[i].x + this.pdata.tx, this.pdata.erasedPoints[i].y + this.pdata.ty, 1, 0, 2 * Math.PI, false);
+                    ctx.arc(this.pdata.erasedPoints[i].x + this.pdata.tx, this.pdata.erasedPoints[i].y + this.pdata.ty, this.pdata.radiusErased, 0, 2 * Math.PI, false);
                     ctx.fill();
                 }
             }
