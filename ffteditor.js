@@ -611,6 +611,7 @@ class ffteditor {
 
     setImage(original) {
         this.originalimage = original;
+        this.pdata = new paintdata();
 
         this.preProcessingImage(original).then((processedImage) => {
             this.image = processedImage;
