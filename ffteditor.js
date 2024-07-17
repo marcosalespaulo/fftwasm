@@ -51,7 +51,7 @@ class erasetool extends tool {
 
                 if (this.pdata.erasedPoints.length > 0) {
                     for (let i = 0; i < this.pdata.erasedPoints.length; i++) {
-                        if (!this.isPointInCircuference(ximg, yimg, this.pdata.erasedPoints[i].x, this.pdata.erasedPoints[i].y, this.pdata.radiusErased))
+                        if (!this.isPointInCircuference(ximg, yimg, this.pdata.erasedPoints[i].x, this.pdata.erasedPoints[i].y, 1))
                             this.down = e;
                         else {
                             inside = true;
@@ -87,7 +87,7 @@ class erasetool extends tool {
 
                     if (this.pdata.erasedPoints.length > 0) {
                         for (let i = 0; i < this.pdata.erasedPoints.length; i++) {
-                            if (!this.isPointInCircuference(ximg, yimg, this.pdata.erasedPoints[i].x, this.pdata.erasedPoints[i].y, this.pdata.radiusErased))
+                            if (!this.isPointInCircuference(ximg, yimg, this.pdata.erasedPoints[i].x, this.pdata.erasedPoints[i].y, 1))
                                 this.down = e;
                             else {
                                 inside = true;
@@ -111,8 +111,7 @@ class erasetool extends tool {
 
     isPointInCircuference(x, y, xc, yc, r) {
         //(x - xc)^2 + (y - yc)^2 >= R^2
-        //return (Math.pow(x - xc, 2) + Math.pow(y - yc, 2) <= Math.pow(r, 2))
-        return false;
+        return (Math.pow(x - xc, 2) + Math.pow(y - yc, 2) <= Math.pow(r, 2))
     }
 }
 
