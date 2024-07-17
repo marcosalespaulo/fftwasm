@@ -126,6 +126,18 @@ class paintdata {
     }
 }
 
+function onResize( element, callback ){
+    var elementHeight = element.height,
+        elementWidth = element.width;
+    setInterval(function(){
+        if( element.height !== elementHeight || element.width !== elementWidth ){
+          elementHeight = element.height;
+          elementWidth = element.width;
+          callback();
+        }
+    }, 300);
+  }
+
 class ffteditor {
 
     static api = null;
@@ -149,28 +161,39 @@ class ffteditor {
             this.id = collection[i].getAttribute('ffteditor');
 
             let table =
-                '<table style="width: 100%;height: 600px;">' +
-                '    <tr>' +
-                '        <td colspan="2">' +
-                '            <div class="btn-group">' +
-                '               <button id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
-                '               <input type="file" id="imgFile' + this.id + '" accept="image/png, image/jpeg" title="image"/>' +
-                '               <button id="btnPan' + this.id + '">Pan</button>' +
-                '               <button id="btnErase' + this.id + '">Erase</button>' +
-                '            </div>' +
-                '        </td>' +
-                '    </tr>' +
-                '    <tr>' +
-                '        <td>' +
-                '            <canvas style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" width="512" height="512"></canvas>' +
-                '        </td>' +
-                '        <td>' +
-                '            <canvas style="border:1px solid #000000;" id="fftOutputImage' + this.id + '" width="512" height="512"></canvas>' +
-                '        </td>' +
-                '    </tr>' +
-                '</table>';
+                // '<table style="width: 100%;height: 600px;">' +
+                // '    <tr>' +
+                // '        <td colspan="2">' +
+                // '            <div class="btn-group">' +
+                // '               <button id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
+                // '               <input type="file" id="imgFile' + this.id + '" accept="image/png, image/jpeg" title="image"/>' +
+                // '               <button id="btnPan' + this.id + '">Pan</button>' +
+                // '               <button id="btnErase' + this.id + '">Erase</button>' +
+                // '            </div>' +
+                // '        </td>' +
+                // '    </tr>' +
+                //'    <tr>' +
+                //'        <td>' +
+                //'            <canvas style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" width="512" height="512"></canvas>' +
+                //'        </td>' +
+                //'        <td>' +
+                //'            <canvas style="border:1px solid #000000;" id="fftOutputImage' + this.id + '" width="512" height="512"></canvas>' +
+                //'        </td>' +
+                //'    </tr>' +
+                // '</table>' +
 
-            collection[i].innerHTML = table;
+                '<div class="btn-group" style="margin-bottom: 2px;">' +
+                '   <button id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
+                '   <input type="file" id="imgFile' + this.id + '" accept="image/png, image/jpeg" title="image"/>' +
+                '   <button id="btnPan' + this.id + '">Pan</button>' +
+                '   <button id="btnErase' + this.id + '">Erase</button>' +
+                '</div>' +
+                '<div style="overflow:auto">' +
+                '   <canvas class="left" style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" ></canvas>' +
+                '   <canvas class="right" style="border:1px solid #000000;" id="fftOutputImage' + this.id + '" ></canvas>' +
+                '</div>';
+
+            collection[i].innerHTML = table;        
         }
 
         this.editorCanvas = document.getElementById('fftEditorCanvas' + this.id);
@@ -206,6 +229,19 @@ class ffteditor {
 
         document.getElementById('btnErase' + this.id).addEventListener("click", (e) => {
             this.tool = new erasetool(this.pdata);
+        });
+
+
+        window.addEventListener("resize", function(e){
+            
+            instance.editorCanvas.width = instance.editorCanvas.clientWidth;
+            instance.editorCanvas.height = instance.editorCanvas.clientHeight;
+            instance.outputCanvas.width = instance.outputCanvas.clientWidth;
+            instance.outputCanvas.height = instance.outputCanvas.clientHeight;
+
+            instance.centralizeImageOnCanvas();
+            instance.paintAll();
+
         });
 
     }
@@ -613,6 +649,8 @@ class ffteditor {
         this.originalimage = original;
         this.pdata = new paintdata();
 
+        window.dispatchEvent(new Event('resize'));
+
         this.preProcessingImage(original).then((processedImage) => {
             this.image = processedImage;
 
@@ -645,6 +683,14 @@ class ffteditor {
         }, (error) => {
             console.log(error);
         });
+    }
+
+    centralizeImageOnCanvas()
+    {
+        this.pdata.tx = (this.editorCanvas.width - this.pdata.imageWidth) / 2;
+        this.pdata.ty = (this.editorCanvas.height - this.pdata.imageHeight) / 2;
+        this.paintAll();
+        
     }
 }
 
