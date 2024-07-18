@@ -126,18 +126,6 @@ class paintdata {
     }
 }
 
-function onResize( element, callback ){
-    var elementHeight = element.height,
-        elementWidth = element.width;
-    setInterval(function(){
-        if( element.height !== elementHeight || element.width !== elementWidth ){
-          elementHeight = element.height;
-          elementWidth = element.width;
-          callback();
-        }
-    }, 300);
-  }
-
 class ffteditor {
 
     static api = null;
@@ -160,27 +148,7 @@ class ffteditor {
         for (let i = 0; i < collection.length; i++) {
             this.id = collection[i].getAttribute('ffteditor');
 
-            let table =
-                // '<table style="width: 100%;height: 600px;">' +
-                // '    <tr>' +
-                // '        <td colspan="2">' +
-                // '            <div class="btn-group">' +
-                // '               <button id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
-                // '               <input type="file" id="imgFile' + this.id + '" accept="image/png, image/jpeg" title="image"/>' +
-                // '               <button id="btnPan' + this.id + '">Pan</button>' +
-                // '               <button id="btnErase' + this.id + '">Erase</button>' +
-                // '            </div>' +
-                // '        </td>' +
-                // '    </tr>' +
-                //'    <tr>' +
-                //'        <td>' +
-                //'            <canvas style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" width="512" height="512"></canvas>' +
-                //'        </td>' +
-                //'        <td>' +
-                //'            <canvas style="border:1px solid #000000;" id="fftOutputImage' + this.id + '" width="512" height="512"></canvas>' +
-                //'        </td>' +
-                //'    </tr>' +
-                // '</table>' +
+            let table =            
 
                 '<div class="btn-group" style="margin-bottom: 2px;">' +
                 '   <button id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
@@ -267,12 +235,18 @@ class ffteditor {
     addCanvasEventListener(canvas) {
         canvas.onselectstart = function () { return false; }
 
-        canvas.addEventListener("mousedown", (e) => {
+
+        let mousedownfunc = (e) => {
             this.tool.onmousedown(e);
             this.paintAll();
-        });
+        };
 
-        canvas.addEventListener("mouseup", (e) => {
+        let mousemovefunc = (e) => {
+            this.tool.onmousemove(e);
+            this.paintAll();
+        };
+
+        let mouseupfunc = (e) => {
             this.tool.onmouseup(e);
             this.paintAll();
 
@@ -306,16 +280,41 @@ class ffteditor {
                     });
                 }
             }
-        });
+        };
 
-        canvas.addEventListener("mousemove", (e) => {
-            this.tool.onmousemove(e);
-            this.paintAll();
-        });
-
-        canvas.addEventListener("mouseout", (e) => {
+        let mouseoutfunc = (e) => {
             this.tool.onmouseout(e);
             this.paintAll();
+        };
+
+
+        canvas.addEventListener("mousedown", mousedownfunc );
+
+        canvas.addEventListener("mouseup", mouseupfunc);
+
+        canvas.addEventListener("mousemove",mousemovefunc );
+
+        canvas.addEventListener("mouseout", mouseoutfunc);
+
+        canvas.addEventListener("touchstart", (e) => {
+            e.clientX = e.targetTouches[0].clientX;
+            e.clientY = e.targetTouches[0].clientY;
+            mousedownfunc(e);
+        });
+
+        canvas.addEventListener("touchmove", (e) => {
+            e.clientX = e.targetTouches[0].clientX;
+            e.clientY = e.targetTouches[0].clientY;
+            mousemovefunc(e);
+            e.preventDefault();
+        });
+
+        canvas.addEventListener("touchend", (e) => {
+            mouseupfunc(e);
+        });
+
+        canvas.addEventListener("touchcancel", (e) => {
+            mouseoutfunc(e);
         });
 
     }
