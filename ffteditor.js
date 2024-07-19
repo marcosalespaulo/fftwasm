@@ -151,10 +151,10 @@ class ffteditor {
             let table =            
 
                 '<div class="btn-group" style="margin-bottom: 2px;">' +
-                '   <button id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
+                '   <button class="button-normal" id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
                 '   <input type="file" id="imgFile' + this.id + '" accept="image/png, image/jpeg" title="image"/>' +
-                '   <button id="btnPan' + this.id + '">Pan</button>' +
-                '   <button id="btnErase' + this.id + '">Erase</button>' +
+                '   <button class="check-button-normal" id="btnPan' + this.id + '">Pan</button>' +
+                '   <button class="check-button-normal" id="btnErase' + this.id + '">Erase</button>' +
                 '</div>' +
                 '<div style="overflow:auto">' +
                 '   <canvas class="left" style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" ></canvas>' +
@@ -191,12 +191,25 @@ class ffteditor {
         });
 
 
+        let selectTool = (elem, tool) => {
+            let checkbuttons = document.getElementsByClassName('check-button-normal');
+
+            for(let i = 0 ; i < checkbuttons.length ; i++)
+            {
+                if(checkbuttons[i].classList.contains('button-selected'))
+                    checkbuttons[i].classList.remove('button-selected')
+            }
+
+            elem.classList.add("button-selected");
+            instance.tool = tool;
+        };
+
         document.getElementById('btnPan' + this.id).addEventListener("click", (e) => {
-            this.tool = new pantool(this.pdata);
+            selectTool(e.currentTarget, new pantool(this.pdata));
         });
 
         document.getElementById('btnErase' + this.id).addEventListener("click", (e) => {
-            this.tool = new erasetool(this.pdata);
+            selectTool(e.currentTarget, new erasetool(this.pdata));
         });
 
 
