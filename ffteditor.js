@@ -33,9 +33,17 @@ class erasetool extends tool {
     constructor(data) {
         super(data);
         this.down = null;
+        this.newPoints = [];
+    }
+
+    getErasedPoints()
+    {
+        return this.newPoints;
     }
 
     onmousedown(e) {
+        
+        this.newPoints = [];
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -65,6 +73,8 @@ class erasetool extends tool {
                     let center = { "x": this.pdata.imageWidth / 2, "y": this.pdata.imageHeight / 2 };
                     this.pdata.erasedPoints.push({ "x": ximg, "y": yimg });
                     this.pdata.erasedPoints.push({ "x": center.x + (center.x - ximg), "y": center.y + (center.y - yimg) });
+                    this.newPoints.push({ "x": ximg, "y": yimg });
+                    this.newPoints.push({ "x": center.x + (center.x - ximg), "y": center.y + (center.y - yimg) });
                 }
             }
         }
@@ -101,6 +111,8 @@ class erasetool extends tool {
                         let center = { "x": this.pdata.imageWidth / 2, "y": this.pdata.imageHeight / 2 };
                         this.pdata.erasedPoints.push({ "x": ximg, "y": yimg });
                         this.pdata.erasedPoints.push({ "x": center.x + (center.x - ximg), "y": center.y + (center.y - yimg) });
+                        this.newPoints.push({ "x": ximg, "y": yimg });
+                        this.newPoints.push({ "x": center.x + (center.x - ximg), "y": center.y + (center.y - yimg) });
                     }
                 }
             }
@@ -126,6 +138,96 @@ class paintdata {
     }
 }
 
+class action
+{
+    constructor(editor){ this.editor = editor; }
+    do(){ throw "Not implemented";}
+    undo(){ throw "Not implemented";}
+}
+
+class eraseraction extends action
+{
+    constructor(editor, erasedPixels, erasedPoints){
+        super(editor);        
+        this.oldvalues = [];
+
+        for (let i = 0; i < erasedPixels.length; i++) {
+            if (erasedPixels[i] == 0) {
+                this.oldvalues.push({
+                    "r" : this.editor.fft_result.real[i],
+                    "i" : this.editor.fft_result.imag[i],
+                    "index" : i
+                });
+            }
+        }
+
+        this.oldPoints = [];
+        for (let i = 0; i < erasedPoints.length; i++) {
+            this.oldPoints.push({"x" : erasedPoints[i].x, "y" : erasedPoints[i].y});
+        }
+    }
+
+    do() { 
+
+        for(let j = 0 ; j < this.oldPoints.length ; j++)
+        {
+            let notfound = true;
+            for(let i = 0 ; i < this.editor.pdata.erasedPoints.length ; i++)
+            {
+                if(this.editor.pdata.erasedPoints[i].x == this.oldPoints[j].x &&
+                    this.editor.pdata.erasedPoints[i].y == this.oldPoints[j].y)
+                {
+                    notfound = false;
+                    break;                    
+                }
+            }
+
+            if(notfound)
+                this.editor.pdata.erasedPoints.push({"x" : this.oldPoints[j].x, "y" : this.oldPoints[j].y });
+        }
+
+        for (let i = 0; i < this.oldvalues.length; i++) {
+            this.editor.fft_result.real[this.oldvalues[i].index] = 0;
+            this.editor.fft_result.imag[this.oldvalues[i].index] = 0;
+        }
+        this.executeFFTBackward();        
+    }
+    
+    undo(){     
+
+        for(let i = 0 ; i < this.editor.pdata.erasedPoints.length ; i++)
+        {
+            for(let j = 0 ; j < this.oldPoints.length ; j++)
+            {
+                if(this.editor.pdata.erasedPoints[i].x == this.oldPoints[j].x &&
+                    this.editor.pdata.erasedPoints[i].y == this.oldPoints[j].y)
+                {
+                    this.editor.pdata.erasedPoints.splice(i, 1);
+                    i--;
+                    break;
+                }
+            }
+        }
+
+        for (let i = 0; i < this.oldvalues.length; i++) {
+            this.editor.fft_result.real[this.oldvalues[i].index] = this.oldvalues[i].r;
+            this.editor.fft_result.imag[this.oldvalues[i].index] = this.oldvalues[i].i;
+        }
+        this.executeFFTBackward();        
+    }
+
+    executeFFTBackward()
+    {       
+        this.editor.fft_backward(this.editor.fft_result.real, this.editor.fft_result.imag, this.editor.fft_result.width, this.editor.fft_result.height).then((backward) => {
+            this.editor.outputimage = backward;
+            this.editor.paintAll();
+        }, (error) => {
+            console.error("Erro ao fazer a fft inversa");
+            console.log(error);
+        });
+    }
+}
+
 class ffteditor {
 
     static api = null;
@@ -142,6 +244,9 @@ class ffteditor {
         this.pdata = new paintdata();
         this.tool = new pantool(this.pdata);
 
+        this.actions = [];
+        this.indexactions = -1;
+
         const instance = this;
         const collection = document.querySelectorAll('[ffteditor]');
 
@@ -151,12 +256,38 @@ class ffteditor {
             let table =
 
                 '<div class="btn-group" style="margin-bottom: 2px;">' +
-                '   <button class="button-normal" id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
+                '   <button class="button-normal" id="btnFile' + this.id + '" for="imgFile' + this.id + '">'+
+                '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-file-earmark-image-fill" viewBox="0 0 16 16">'+
+                '            <path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707v5.586l-2.73-2.73a1 1 0 0 0-1.52.127l-1.889 2.644-1.769-1.062a1 1 0 0 0-1.222.15L2 12.292V2a2 2 0 0 1 2-2m5.5 1.5v2a1 1 0 0 0 1 1h2zm-1.498 4a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"/>'+
+                '            <path d="M10.564 8.27 14 11.708V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-.293l3.578-3.577 2.56 1.536 2.426-3.395z"/>'+
+                '        </svg>'+
+                '        File'+
+                '   </button>'+
+                '   <button class="button-normal button-disabled" id="btnUndo' + this.id + '">'+
+                '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrow-90deg-left" viewBox="0 0 16 16">'+
+                '            <path fill-rule="evenodd" d="M1.146 4.854a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H12.5A2.5 2.5 0 0 1 15 6.5v8a.5.5 0 0 1-1 0v-8A1.5 1.5 0 0 0 12.5 5H2.707l3.147 3.146a.5.5 0 1 1-.708.708z"/>'+
+                '        </svg>'+    
+                '        Undo'+
+                '   </button>'+
+                '   <button class="button-normal button-disabled" id="btnDo' + this.id + '">'+
+                '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrow-90deg-right" viewBox="0 0 16 16">'+
+                '            <path fill-rule="evenodd" d="M14.854 4.854a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 4H3.5A2.5 2.5 0 0 0 1 6.5v8a.5.5 0 0 0 1 0v-8A1.5 1.5 0 0 1 3.5 5h9.793l-3.147 3.146a.5.5 0 0 0 .708.708z"/>'+
+                '        </svg>'+    
+                '        Do'+
+                '   </button>'+
                 '   <input type="file" id="imgFile' + this.id + '" accept="image/png, image/jpeg" title="image"/>' +
-                '   <button class="check-button-normal" id="btnPan' + this.id + '">Pan</button>' +
-                '   <button class="check-button-normal" id="btnErase' + this.id + '">Erase</button>' +
-                '   <button class="check-button-normal" id="btnUndo' + this.id + '">Undo</button>' +
-                '   <button class="check-button-normal" id="btnDo' + this.id + '">Do</button>' +
+                '   <button class="check-button-normal" id="btnPan' + this.id + '">'+
+                '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrows-move" viewBox="0 0 16 16">'+
+                '            <path fill-rule="evenodd" d="M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10M.146 8.354a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L1.707 7.5H5.5a.5.5 0 0 1 0 1H1.707l1.147 1.146a.5.5 0 0 1-.708.708zM10 8a.5.5 0 0 1 .5-.5h3.793l-1.147-1.146a.5.5 0 0 1 .708-.708l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L14.293 8.5H10.5A.5.5 0 0 1 10 8"/>'+
+                '        </svg>'+  
+                '        Pan'+
+                '   </button>'+
+                '   <button class="check-button-normal" id="btnErase' + this.id + '">'+
+                '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-eraser-fill" viewBox="0 0 16 16">'+
+                '            <path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828zm.66 11.34L3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293z"/>'+
+                '        </svg>'+    
+                '        Eraser'+
+                '   </button>'+                
                 '</div>' +
                 '<div style="overflow:auto">' +
                 '   <canvas class="left" style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" ></canvas>' +
@@ -213,6 +344,24 @@ class ffteditor {
             selectTool(e.currentTarget, new erasetool(this.pdata));
         });
 
+        document.getElementById('btnUndo' + this.id).addEventListener("click", (e) => {
+            if(this.indexactions >= 0 && this.actions.length > 0)
+            {
+                this.actions[this.indexactions].undo();
+                this.indexactions--;
+                this.updateDoUndoButtons();
+            }
+        });
+
+        document.getElementById('btnDo' + this.id).addEventListener("click", (e) => {
+            if(this.indexactions >= -1 && this.actions.length > 0 && this.indexactions < this.actions.length - 1)
+            {
+                this.indexactions++;
+                this.actions[this.indexactions].do();
+                this.updateDoUndoButtons();
+            }
+        });
+
 
         window.addEventListener("resize", function (e) {
 
@@ -266,27 +415,14 @@ class ffteditor {
 
             if (this.tool instanceof erasetool && this.fft_result) {
                 if (this.pdata && this.pdata.erasedPoints.length > 0) {
+                    
+                    let erasedPoints = this.tool.getErasedPoints();
+                    this.getErasedPixels().then((erasedPixels) => {                       
 
-                    this.getErasedPixels().then((erasedPixels) => {
-
-                        for (let i = 0; i < erasedPixels.length; i++) {
-                            if (erasedPixels[i] == 0) {
-                                this.fft_result.real[i] = 0;
-                                this.fft_result.imag[i] = 0;
-                            }
-                        }
-
-                        this.fft_backward(this.fft_result.real, this.fft_result.imag, this.fft_result.width, this.fft_result.height).then((backward) => {
-                            this.outputimage = backward;
-                            this.paintOutput();
-                        }, (error) => {
-                            console.error("Erro ao fazer a fft inversa");
-                            console.log(error);
-                        });
-
-
+                        let action = new eraseraction(this, erasedPixels, erasedPoints);
+                        this.addAction(action);                       
                     }, (error) => {
-
+            
                         console.error("Erro ao gerar erasedPixels");
                         console.log(error);
                     });
@@ -440,7 +576,6 @@ class ffteditor {
             ctx.drawImage(this.outputimage, this.pdata.tx, this.pdata.ty, this.outputimage.width, this.outputimage.height);
         }
     }
-
 
     paintAll() {
         this.paintEditor();
@@ -696,6 +831,36 @@ class ffteditor {
         this.paintAll();
 
     }
+
+    addAction(action)
+    {
+        while(this.indexactions < this.actions.length - 1)
+            this.actions.pop();            
+        
+        this.actions.push(action);
+        this.indexactions++;
+        this.actions[this.indexactions].do();
+        this.updateDoUndoButtons();
+    }
+
+
+    updateDoUndoButtons()
+    {
+        let btnDo = document.getElementById('btnDo' + this.id);
+        let btnUndo = document.getElementById('btnUndo' + this.id);
+
+        if(this.indexactions > -1)
+            btnUndo.classList.remove("button-disabled");
+        else
+            btnUndo.classList.add("button-disabled");
+
+        if(this.indexactions < this.actions.length - 1)
+            btnDo.classList.remove("button-disabled");
+        else
+            btnDo.classList.add("button-disabled");
+        
+    }
+
 }
 
 Module.onRuntimeInitialized = ffteditor.initialize;
