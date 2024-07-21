@@ -320,6 +320,8 @@ class ffteditor {
                     instance.setImage(img);
                 }
                 img.src = URL.createObjectURL(e.target.files[0]);
+                e.target.value = "";
+
             }
         });
 
