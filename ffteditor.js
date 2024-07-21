@@ -287,6 +287,12 @@ class ffteditor {
                 '            <path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828zm.66 11.34L3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293z"/>'+
                 '        </svg>'+    
                 '        Eraser'+
+                '   </button>'+      
+                '   <button class="button-normal button-disabled" id="btnExport' + this.id + '">'+
+                '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-file-earmark-arrow-down-fill" viewBox="0 0 16 16">'+
+                '            <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1m-1 4v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 11.293V7.5a.5.5 0 0 1 1 0"/>'+
+                '        </svg>'+
+                '        Export'+
                 '   </button>'+                
                 '</div>' +
                 '<div style="overflow:auto">' +
@@ -368,6 +374,25 @@ class ffteditor {
             }
         });
 
+        document.getElementById('btnExport' + this.id).addEventListener("click", (e) => {
+            
+            if(this.outputimage)
+            {
+                this.posProcessingImage().then((img) => {      
+
+                    const link = document.createElement('a');
+                    link.href = img.src;
+                    link.download = 'export.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                                    
+                }, (error) => {
+                    console.error("Erro ao gerar a imagem de saída");
+                    console.log(error)
+                });  
+            }
+        });
 
         window.addEventListener("resize", function (e) {
 
@@ -632,6 +657,49 @@ class ffteditor {
         });
     }
 
+    posProcessingImage()
+    { 
+        return new Promise((resolve, reject) => {
+           
+            if (this.originalimage) {
+
+                if(this.outputimage)
+                {
+                    let canvas = document.createElement('canvas');
+                    canvas.width = this.originalimage.width;
+                    canvas.height = this.originalimage.height;
+
+                    let ctx = canvas.getContext("2d");
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.beginPath();
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    let recImage = {
+                        "x" : (this.outputimage.width - this.originalimage.width) / 2.0,
+                        "y" : (this.outputimage.height - this.originalimage.height) / 2.0,
+                        "w" : this.originalimage.width,
+                        "h" : this.originalimage.height
+                    };
+
+                    ctx.drawImage(this.outputimage, -recImage.x, -recImage.y);
+
+                    const outputImage = new Image();
+                    outputImage.addEventListener("load", () => {
+                        resolve(outputImage);
+                    });
+                    outputImage.src = canvas.toDataURL();
+                }
+                else{
+                    reject("Erro, a imagem de saída não pode ser nula");
+                }
+            }
+            else {
+                reject("Erro, a imagem não pode ser nula");
+            }
+        });
+    }
+
     getPixels(inputImage) {
         return new Promise((resolve, reject) => {
 
@@ -814,6 +882,7 @@ class ffteditor {
                         this.fft_backward(fft_result.real, fft_result.imag, fft_result.width, fft_result.height).then((backward) => {
                             this.outputimage = backward;
                             this.paintOutput();
+                            document.getElementById('btnExport' + this.id).classList.remove("button-disabled");
                         }, (error) => {
                             console.error("Erro ao fazer a fft inversa");
                             console.log(error);
@@ -849,7 +918,6 @@ class ffteditor {
         this.updateDoUndoButtons();
     }
 
-
     updateDoUndoButtons()
     {
         let btnDo = document.getElementById('btnDo' + this.id);
@@ -866,7 +934,6 @@ class ffteditor {
             btnDo.classList.add("button-disabled");
         
     }
-
 }
 
 Module.onRuntimeInitialized = ffteditor.initialize;
