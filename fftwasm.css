@@ -35,6 +35,18 @@
     opacity: 0.6;
     cursor: not-allowed;
   }
+ 
+  .erase-tool
+  {
+    cursor: crosshair;
+  }
+
+  .pan-tool
+  {
+    cursor: grab;
+  }
+
+
 
   /* Clear floats (clearfix hack) */
   .btn-group:after {
@@ -58,15 +70,6 @@ input[type="file"] {
 }
 
 
-
-
-
-
-
-
-
-
-
 * {
   box-sizing: border-box;
 }
@@ -77,6 +80,7 @@ input[type="file"] {
   height: 512px;
   margin-right: 2px;  
   margin-bottom: 0px;
+  border:1px solid #000000;   
 }
 
 .right {
@@ -85,6 +89,7 @@ input[type="file"] {
   height: 512px;
   margin-left: 2px;
   margin-top: 0px;
+  border:1px solid #000000;   
 }
 
 

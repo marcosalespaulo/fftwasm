@@ -290,8 +290,8 @@ class ffteditor {
                 '   </button>'+                
                 '</div>' +
                 '<div style="overflow:auto">' +
-                '   <canvas class="left" style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" ></canvas>' +
-                '   <canvas class="right" style="border:1px solid #000000;" id="fftOutputImage' + this.id + '" ></canvas>' +
+                '   <canvas class="left" id="fftEditorCanvas' + this.id + '" ></canvas>' +
+                '   <canvas class="right" id="fftOutputImage' + this.id + '" ></canvas>' +
                 '</div>';
 
             collection[i].innerHTML = table;
@@ -337,10 +337,14 @@ class ffteditor {
         };
 
         document.getElementById('btnPan' + this.id).addEventListener("click", (e) => {
+            this.editorCanvas.classList.remove("erase-tool");
+            this.editorCanvas.classList.add("pan-tool");
             selectTool(e.currentTarget, new pantool(this.pdata));
         });
 
         document.getElementById('btnErase' + this.id).addEventListener("click", (e) => {
+            this.editorCanvas.classList.remove("pan-tool");
+            this.editorCanvas.classList.add("erase-tool");
             selectTool(e.currentTarget, new erasetool(this.pdata));
         });
 
