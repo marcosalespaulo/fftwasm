@@ -62,7 +62,7 @@ class erasetool extends tool {
 
                 if (!inside) {
                     this.down = e;
-                    let center = { "x" : this.pdata.imageWidth / 2, "y" : this.pdata.imageHeight / 2 };
+                    let center = { "x": this.pdata.imageWidth / 2, "y": this.pdata.imageHeight / 2 };
                     this.pdata.erasedPoints.push({ "x": ximg, "y": yimg });
                     this.pdata.erasedPoints.push({ "x": center.x + (center.x - ximg), "y": center.y + (center.y - yimg) });
                 }
@@ -98,7 +98,7 @@ class erasetool extends tool {
 
                     if (!inside) {
                         this.down = e;
-                        let center = { "x" : this.pdata.imageWidth / 2, "y" : this.pdata.imageHeight / 2 };
+                        let center = { "x": this.pdata.imageWidth / 2, "y": this.pdata.imageHeight / 2 };
                         this.pdata.erasedPoints.push({ "x": ximg, "y": yimg });
                         this.pdata.erasedPoints.push({ "x": center.x + (center.x - ximg), "y": center.y + (center.y - yimg) });
                     }
@@ -148,20 +148,22 @@ class ffteditor {
         for (let i = 0; i < collection.length; i++) {
             this.id = collection[i].getAttribute('ffteditor');
 
-            let table =            
+            let table =
 
                 '<div class="btn-group" style="margin-bottom: 2px;">' +
                 '   <button class="button-normal" id="btnFile' + this.id + '" for="imgFile' + this.id + '">File</button>' +
                 '   <input type="file" id="imgFile' + this.id + '" accept="image/png, image/jpeg" title="image"/>' +
                 '   <button class="check-button-normal" id="btnPan' + this.id + '">Pan</button>' +
                 '   <button class="check-button-normal" id="btnErase' + this.id + '">Erase</button>' +
+                '   <button class="check-button-normal" id="btnUndo' + this.id + '">Undo</button>' +
+                '   <button class="check-button-normal" id="btnDo' + this.id + '">Do</button>' +
                 '</div>' +
                 '<div style="overflow:auto">' +
                 '   <canvas class="left" style="border:1px solid #000000;" id="fftEditorCanvas' + this.id + '" ></canvas>' +
                 '   <canvas class="right" style="border:1px solid #000000;" id="fftOutputImage' + this.id + '" ></canvas>' +
                 '</div>';
 
-            collection[i].innerHTML = table;        
+            collection[i].innerHTML = table;
         }
 
         this.editorCanvas = document.getElementById('fftEditorCanvas' + this.id);
@@ -194,9 +196,8 @@ class ffteditor {
         let selectTool = (elem, tool) => {
             let checkbuttons = document.getElementsByClassName('check-button-normal');
 
-            for(let i = 0 ; i < checkbuttons.length ; i++)
-            {
-                if(checkbuttons[i].classList.contains('button-selected'))
+            for (let i = 0; i < checkbuttons.length; i++) {
+                if (checkbuttons[i].classList.contains('button-selected'))
                     checkbuttons[i].classList.remove('button-selected')
             }
 
@@ -213,8 +214,8 @@ class ffteditor {
         });
 
 
-        window.addEventListener("resize", function(e){
-            
+        window.addEventListener("resize", function (e) {
+
             instance.editorCanvas.width = instance.editorCanvas.clientWidth;
             instance.editorCanvas.height = instance.editorCanvas.clientHeight;
             instance.outputCanvas.width = instance.outputCanvas.clientWidth;
@@ -268,10 +269,8 @@ class ffteditor {
 
                     this.getErasedPixels().then((erasedPixels) => {
 
-                        for (let i = 0; i < erasedPixels.length; i++)
-                        {
-                            if (erasedPixels[i] == 0)
-                            {
+                        for (let i = 0; i < erasedPixels.length; i++) {
+                            if (erasedPixels[i] == 0) {
                                 this.fft_result.real[i] = 0;
                                 this.fft_result.imag[i] = 0;
                             }
@@ -301,11 +300,11 @@ class ffteditor {
         };
 
 
-        canvas.addEventListener("mousedown", mousedownfunc );
+        canvas.addEventListener("mousedown", mousedownfunc);
 
         canvas.addEventListener("mouseup", mouseupfunc);
 
-        canvas.addEventListener("mousemove",mousemovefunc );
+        canvas.addEventListener("mousemove", mousemovefunc);
 
         canvas.addEventListener("mouseout", mouseoutfunc);
 
@@ -332,8 +331,7 @@ class ffteditor {
 
     }
 
-    getErasedPixels()
-    {
+    getErasedPixels() {
         return new Promise((resolve, reject) => {
 
             try {
@@ -356,7 +354,7 @@ class ffteditor {
                         ctx.fill();
                     }
                 }
-            
+
                 const outputImage = new Image();
                 outputImage.addEventListener("load", () => {
 
@@ -367,18 +365,17 @@ class ffteditor {
                     }, (error) => {
                         console.log(error);
                     });
-                    
+
                 });
                 outputImage.src = canvas.toDataURL();
-                
+
             } catch (error) {
                 reject(error);
             }
         });
     }
 
-    assemblyImageByQuadrantsUchar(img, w, h)
-    {
+    assemblyImageByQuadrantsUchar(img, w, h) {
         let buffer = new Uint8Array(w * h);
 
         let wp = w / 2;
@@ -395,10 +392,8 @@ class ffteditor {
         //-----------------
 
         // 1 troca com 4
-        for (let i = 0; i < h / 2; i++)
-        {
-            for (let j = 0; j < w / 2; j++)
-            {
+        for (let i = 0; i < h / 2; i++) {
+            for (let j = 0; j < w / 2; j++) {
                 let index = (w * (i + hp)) + (j + wp);
                 let index2 = w * i + j;
                 buffer[index] = img[index2];
@@ -407,10 +402,8 @@ class ffteditor {
         }
 
         //3 troca com 2
-        for (let i = 0; i < h / 2; i++)
-        {
-            for (let j = 0; j < w / 2; j++)
-            {
+        for (let i = 0; i < h / 2; i++) {
+            for (let j = 0; j < w / 2; j++) {
                 let index = (w * (i + hp)) + j;
                 let index2 = w * i + (j + wp);
                 buffer[index2] = img[index];
@@ -697,12 +690,11 @@ class ffteditor {
         });
     }
 
-    centralizeImageOnCanvas()
-    {
+    centralizeImageOnCanvas() {
         this.pdata.tx = (this.editorCanvas.width - this.pdata.imageWidth) / 2;
         this.pdata.ty = (this.editorCanvas.height - this.pdata.imageHeight) / 2;
         this.paintAll();
-        
+
     }
 }
 
