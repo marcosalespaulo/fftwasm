@@ -493,7 +493,8 @@ class ffteditor {
         canvas.addEventListener("touchstart", (e) => {
             e.clientX = e.targetTouches[0].clientX;
             e.clientY = e.targetTouches[0].clientY;
-            //mousedownfunc(e);
+            mousedownfunc(e);
+            e.preventDefault();
         });
 
         canvas.addEventListener("touchmove", (e) => {
@@ -505,10 +506,12 @@ class ffteditor {
 
         canvas.addEventListener("touchend", (e) => {
             mouseupfunc(e);
+            e.preventDefault();
         });
 
         canvas.addEventListener("touchcancel", (e) => {
             mouseoutfunc(e);
+            e.preventDefault();
         });
 
     }
