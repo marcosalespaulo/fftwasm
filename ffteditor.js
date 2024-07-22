@@ -305,6 +305,7 @@ class ffteditor {
 
         this.editorCanvas = document.getElementById('fftEditorCanvas' + this.id);
         this.outputCanvas = document.getElementById('fftOutputImage' + this.id);
+       
 
         this.addCanvasEventListener(this.editorCanvas);
 
@@ -404,7 +405,21 @@ class ffteditor {
             instance.centralizeImageOnCanvas();
             instance.paintAll();
 
-        });
+        });     
+        
+
+        setTimeout(() => {
+            
+            if(ffteditor.api != null)
+            {
+                var img = new Image;
+                img.onload = function () {
+                    instance.setImage(img);
+                }
+                img.src = "palhaco.jpg";           
+            }
+
+        }, 1000);
 
     }
 
@@ -423,7 +438,7 @@ class ffteditor {
             fft_phase: Module.cwrap("fft_phase", "", ["number", "number", "number", "number", "number"]),
             fft_spectre: Module.cwrap("fft_spectre", "", ["number", "number", "number", "number", "number", "number"]),
         };
-        console.log('FFTWasm Version:' + ffteditor.api.get_version());
+        console.log('FFTWasm Version:' + ffteditor.api.get_version());        
     }
 
     addCanvasEventListener(canvas) {
@@ -911,7 +926,7 @@ class ffteditor {
     {
         while(this.indexactions < this.actions.length - 1)
             this.actions.pop();            
-        
+
         this.actions.push(action);
         this.indexactions++;
         this.actions[this.indexactions].do();
