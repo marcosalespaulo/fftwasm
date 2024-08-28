@@ -127,6 +127,64 @@ class erasetool extends tool {
     }
 }
 
+class circularfiltertool extends tool
+{
+    constructor(data) {
+        super(data);
+        this.down = null;        
+    }
+
+        
+    onmousedown(e) {
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        //convert canvas point to image point
+        const ximg = x - (this.pdata.tx);
+        const yimg = y - (this.pdata.ty);
+
+        this.down = {x:ximg, y:yimg};
+    };
+    onmouseup(e) { this.down = null; };
+    onmousemove(e) {
+        if (this.down) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            //convert canvas point to image point
+            const ximg = x - (this.pdata.tx);
+            const yimg = y - (this.pdata.ty);
+
+            //check if point is on image
+            if (ximg > 0 && ximg < this.pdata.imageWidth) {
+                if (yimg > 0 && yimg < this.pdata.imageHeight) {
+
+                    let x_radius = Math.abs(this.down.x - ximg) / 2;
+                    let y_radius = Math.abs(this.down.y - yimg) / 2;
+
+                    if(x_radius > 1 && y_radius > 1)
+                    {
+                        this.pdata.circularfilter = 
+                        {
+                            x : this.down.x + x_radius,
+                            y : this.down.y + y_radius,
+                            x_radius : x_radius,
+                            y_radius : y_radius
+                        };
+                    }
+                }
+            }
+            
+            
+        }
+    };
+
+    onmouseout(e) { this.down = null; };
+}
+
 class paintdata {
     constructor() {
         this.tx = 0;
@@ -135,6 +193,7 @@ class paintdata {
         this.imageHeight = 0;
         this.erasedPoints = [];
         this.radiusErased = 10;
+        this.circularfilter = null;
     }
 }
 
@@ -287,6 +346,12 @@ class ffteditor {
                 '            <path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828zm.66 11.34L3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293z"/>'+
                 '        </svg>'+    
                 '        Eraser'+
+                '   </button>'+     
+                '   <button class="check-button-normal" id="btnCircularFilter' + this.id + '">'+
+                '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" fill="currentColor">'+
+                '            <path d="M256 0c17.7 0 32 14.3 32 32l0 10.4c93.7 13.9 167.7 88 181.6 181.6l10.4 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-10.4 0c-13.9 93.7-88 167.7-181.6 181.6l0 10.4c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-10.4C130.3 455.7 56.3 381.7 42.4 288L32 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l10.4 0C56.3 130.3 130.3 56.3 224 42.4L224 32c0-17.7 14.3-32 32-32zM107.4 288c12.5 58.3 58.4 104.1 116.6 116.6l0-20.6c0-17.7 14.3-32 32-32s32 14.3 32 32l0 20.6c58.3-12.5 104.1-58.4 116.6-116.6L384 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l20.6 0C392.1 165.7 346.3 119.9 288 107.4l0 20.6c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-20.6C165.7 119.9 119.9 165.7 107.4 224l20.6 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-20.6 0zM256 224a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/>'+
+                '        </svg>'+
+                '        Circular Filter'+
                 '   </button>'+      
                 '   <button class="button-normal button-disabled" id="btnExport' + this.id + '">'+
                 '        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-file-earmark-arrow-down-fill" viewBox="0 0 16 16">'+
@@ -355,6 +420,11 @@ class ffteditor {
             this.editorCanvas.classList.remove("pan-tool");
             this.editorCanvas.classList.add("erase-tool");
             selectTool(e.currentTarget, new erasetool(this.pdata));
+        });
+
+        document.getElementById('btnCircularFilter' + this.id).addEventListener("click", (e) => {
+            
+            selectTool(e.currentTarget, new circularfiltertool(this.pdata));
         });
 
         document.getElementById('btnUndo' + this.id).addEventListener("click", (e) => {
@@ -474,6 +544,23 @@ class ffteditor {
                     });
                 }
             }
+
+            if (this.tool instanceof circularfiltertool) {
+                if (this.pdata && this.pdata.circularfilter) {
+                    
+                    //let erasedPoints = this.tool.getErasedPoints();
+                    this.getErasedPixels().then((erasedPixels) => {                       
+
+                        //let action = new eraseraction(this, erasedPixels, erasedPoints);
+                        let action = new eraseraction(this, erasedPixels, []);
+                        this.addAction(action);                       
+                    }, (error) => {
+            
+                        console.error("Erro ao gerar erasedPixels");
+                        console.log(error);
+                    });
+                }
+            }
         };
 
         let mouseoutfunc = (e) => {
@@ -529,6 +616,21 @@ class ffteditor {
                 ctx.beginPath();
                 ctx.fillStyle = "white";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if(this.pdata.circularfilter)
+                {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.beginPath();
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        
+                    ctx.fillStyle = "white";
+                    ctx.beginPath();
+                    ctx.ellipse(this.pdata.circularfilter.x, this.pdata.circularfilter.y, this.pdata.circularfilter.x_radius, this.pdata.circularfilter.y_radius, 0, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+
 
                 if (this.pdata.erasedPoints.length > 0) {
                     //ctx.fillStyle = 'black';
@@ -607,13 +709,30 @@ class ffteditor {
 
 
             if (this.pdata.erasedPoints.length > 0) {
-                ctx.fillStyle = "rgba(0, 0, 0, 1)";
+                ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
                 //ctx.fillStyle = 'gray';
                 for (let i = 0; i < this.pdata.erasedPoints.length; i++) {
                     ctx.beginPath();
                     ctx.arc(this.pdata.erasedPoints[i].x + this.pdata.tx, this.pdata.erasedPoints[i].y + this.pdata.ty, this.pdata.radiusErased, 0, 2 * Math.PI, false);
                     ctx.fill();
                 }
+            }
+
+            if(this.pdata.circularfilter)
+            {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.4)"; // Color for outside the ellipse
+                ctx.fillRect(this.pdata.tx, this.pdata.ty, this.spectre.width, this.spectre.height);
+            
+                // Set the composite operation to cut out the ellipse (make it transparent)
+                ctx.globalCompositeOperation = 'destination-out';
+            
+                // Draw the ellipse
+                ctx.beginPath();
+                ctx.ellipse(this.pdata.circularfilter.x + this.pdata.tx, this.pdata.circularfilter.y + this.pdata.ty, this.pdata.circularfilter.x_radius, this.pdata.circularfilter.y_radius, 0, 0, 2 * Math.PI);
+                ctx.fill();
+            
+                // Reset the composite operation to default
+                ctx.globalCompositeOperation = 'source-over';
             }
         }
     }
